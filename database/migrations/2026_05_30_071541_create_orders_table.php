@@ -13,8 +13,12 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('user_id');
-            $table->integer('coupon_id');
+            $table->foreignId('user_id')
+                ->constrained()
+                ->cascadeOnDelete();
+            $table->foreignId('coupon_id')
+                ->constrained()
+                ->cascadeOnDelete();
             $table->string('status');
             $table->string('total');
             $table->string('subtotal');
@@ -26,7 +30,9 @@ return new class extends Migration
             $table->text('billing_address');
             $table->string('payment_method');
             $table->string('payment_status');
-            $table->string('transaction_id');
+            $table->foreignId('transaction_id')
+                ->constrained()
+                ->cascadeOnDelete();
             $table->string('notes');
             $table->string('ip_address');
             $table->timestamp('paid_at');
