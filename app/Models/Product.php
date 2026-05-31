@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Product extends Model
 {
@@ -76,5 +77,15 @@ class Product extends Model
     {
         return $this->belongsToMany(Tag::class, 'product_tag')
             ->withTimestamps();
+    }
+
+    /**
+     * Stock accessor for convenient access to inventory stock
+     */
+    protected function stock(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->inventory?->stock ?? 0,
+        );
     }
 }

@@ -4,14 +4,20 @@ namespace App\Actions;
 
 use App\Enums\OrderStatus;
 use App\Exceptions\ProductItemOutOfStockException;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
+use App\Repositories\Contracts\OrderItemRepositoryInterface;
+use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 final class StoreOrderAction
 {
+    public function __construct(
+        private readonly ProductRepositoryInterface $productRepository,
+        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly OrderItemRepositoryInterface $orderItemRepository
+    ) {
+    }
 
     public function execute(array $items): int
     {
@@ -22,11 +28,7 @@ final class StoreOrderAction
 
         return DB::transaction(function () use ($user, $quantities, $productIds) {
 
-            $products = Product::query()
-                ->whereIn('id', $productIds)
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
+            $products = $this->productRepository->findByIdsWithLock($productIds);
 
             $total = 0;
             $orderItemsData = [];
@@ -47,7 +49,7 @@ final class StoreOrderAction
                 ];
             }
 
-            $orderId = Order::query()->insertGetId([
+            $orderId = $this->orderRepository->create([
                 'user_id'    => $user->id,
                 'total'      => $total,
                 'status'     => OrderStatus::Pending->value,
@@ -58,12 +60,10 @@ final class StoreOrderAction
             foreach ($orderItemsData as &$item) {
                 $item['order_id'] = $orderId;
 
-                Product::query()
-                    ->where('id', $item['product_id'])
-                    ->decrement('stock', $item['quantity']);
+                $this->productRepository->decrementStock($item['product_id'], $item['quantity']);
             }
 
-            OrderItem::query()->insert($orderItemsData);
+            $this->orderItemRepository->bulkInsert($orderItemsData);
 
             return $orderId;
         });

@@ -4,9 +4,11 @@ namespace App\Repositories;
 
 use App\Filters\ProductFilter;
 use App\Models\Product;
+use App\Models\ProductInventory;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class ProductRepository implements ProductRepositoryInterface
 {
@@ -17,9 +19,6 @@ class ProductRepository implements ProductRepositoryInterface
         $this->model = $model;
     }
 
-    /**
-     * Get base query with relationships.
-     */
     protected function baseQuery(): Builder
     {
         return $this->model->newQuery()->with([
@@ -27,22 +26,6 @@ class ProductRepository implements ProductRepositoryInterface
             'brand:id,name,slug',
             'primaryImage:id,product_id,image_path,alt_text',
             'inventory:id,product_id,sku,stock,reserved_stock'
-        ]);
-    }
-
-    /**
-     * Get base query with full relationships for single product.
-     */
-    protected function detailQuery(): Builder
-    {
-        return $this->model->newQuery()->with([
-            'category',
-            'brand',
-            'images',
-            'inventory',
-            'attributes',
-            'tags',
-            'seo'
         ]);
     }
 
@@ -61,6 +44,23 @@ class ProductRepository implements ProductRepositoryInterface
     public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return $this->search($filters, $perPage);
+    }
+
+    public function findByIdsWithLock(array $ids): Collection
+    {
+        return $this->model->newQuery()
+            ->with('inventory')
+            ->whereIn('id', $ids)
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+    }
+
+    public function decrementStock(int $productId, int $quantity): int
+    {
+        return ProductInventory::query()
+            ->where('product_id', $productId)
+            ->decrement('stock', $quantity);
     }
 }
 
