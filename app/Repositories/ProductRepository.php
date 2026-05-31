@@ -53,13 +53,7 @@ class ProductRepository implements ProductRepositoryInterface
         $filter = new ProductFilter($query, $filters);
         $query = $filter->apply();
 
-        if (!isset($filters['status'])) {
-            $query->where('status', 'active');
-        }
-
-        if (!isset($filters['sort_by'])) {
-            $query->orderBy('created_at', 'desc');
-        }
+        $query->orderBy('created_at', 'desc');
 
         return $query->paginate($perPage);
     }

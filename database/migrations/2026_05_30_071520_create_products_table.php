@@ -27,6 +27,9 @@ return new class extends Migration
             $table->unsignedInteger('sales_count')->default(0);
             $table->timestamps();
             $table->softDeletes();
+
+            $table->fullText(['name', 'slug', 'description']);
+            $table->index('created_at');
         });
 
         Schema::create('product_inventory', function (Blueprint $table) {

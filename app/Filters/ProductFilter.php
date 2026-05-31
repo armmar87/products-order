@@ -29,17 +29,14 @@ class ProductFilter
         return $this->query;
     }
 
-    /**
-     * Filter by search query (name or description).
-     */
     protected function search(?string $value): void
     {
         if ($value) {
-            $this->query->where(function($q) use ($value) {
-                $q->where('name', 'like', "%{$value}%")
-                  ->orWhere('slug', 'like', "%{$value}%")
-                  ->orWhere('description', 'like', "%{$value}%");
-            });
+            $this->query->whereFullText(['name', 'slug', 'description'], $value);
+            $this->query->whereRaw(
+                "MATCH(name, slug, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                [$value]
+            );
         }
     }
 }
